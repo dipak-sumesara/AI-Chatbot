@@ -18,6 +18,11 @@ export const router = createBrowserRouter([
         path: "/character/create",
         element: <CreateCharacterPage />,
       },
+      {
+        path: "/character/edit/:characterId",
+        element: <CreateCharacterPage />,
+      },
+      
     ],
   },
 ]);

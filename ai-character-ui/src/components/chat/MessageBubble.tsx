@@ -1,169 +1,179 @@
-import { useEffect, useRef, useState } from "react";
-
 import {
   Copy,
   Edit3,
-  GitBranch,
   MoreHorizontal,
   RotateCcw,
   Trash2,
 } from "lucide-react";
 
+import { useState } from "react";
+
 type Props = {
-  isUser?: boolean;
   message: string;
+
+  isUser?: boolean;
+
+  characterImage?: string;
 };
 
-const MessageBubble = ({ isUser, message }: Props) => {
-  const [open, setOpen] = useState(false);
+const formatMessage = (
+  text: string,
+  isUser = false
+) => {
+  const parts = text.split(
+    /(\*.*?\*)/g
+  );
 
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+  return parts.map(
+    (part, index) => {
+      // Narration
       if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node)
+        part.startsWith("*") &&
+        part.endsWith("*")
       ) {
-        setOpen(false);
+        return (
+          <span
+            key={index}
+            className={`italic ${isUser ? "text-black/45" : "text-white/45"}`}
+          >
+            {part.slice(1, -1)}
+          </span>
+        );
       }
-    };
 
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside
-    );
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
+      // Normal dialogue
+      return (
+        <span key={index}>
+          {part}
+        </span>
       );
-    };
-  }, []);
+    }
+  );
+};
 
-  const menuItems = [
-    {
-      icon: Copy,
-      label: "Copy Message",
-    },
-    {
-      icon: Edit3,
-      label: "Edit Message",
-    },
-    {
-      icon: GitBranch,
-      label: "Branch From Here",
-    },
-    {
-      icon: RotateCcw,
-      label: "Return To This Moment",
-    },
-    {
-      icon: Trash2,
-      label: "Delete Message",
-    },
-  ];
+const MessageBubble = ({
+  message,
+  isUser,
+  characterImage,
+}: Props) => {
+  const [open, setOpen] =
+    useState(false);
 
   return (
     <div
-      className={`flex items-end gap-3 ${
-        isUser ? "justify-end" : ""
-      }`}
+      className={`flex items-end gap-3
+      ${isUser
+          ? "justify-end"
+          : "justify-start"
+        }`}
     >
-      {/* Avatar */}
+      {/* Character Avatar */}
       {!isUser && (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3f3f46] to-[#1c1c1f] shrink-0 shadow-xl" />
+        <>
+          {characterImage ? (
+            <img
+              src={characterImage}
+              alt="character"
+              className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#3f3f46] to-[#1c1c1f]" />
+          )}
+        </>
       )}
 
-      <div className="relative flex items-center gap-2 max-w-[720px]">
-        {/* Left Menu */}
-        {!isUser && (
-          <div
-            className="relative"
-            ref={menuRef}
-          >
-            <button
-              onClick={() => setOpen((prev) => !prev)}
-              className="w-8 h-8 rounded-xl hover:bg-white/[0.05] transition flex items-center justify-center"
-            >
-              <MoreHorizontal
-                size={15}
-                className="text-white/35"
-              />
-            </button>
-
-            {open && (
-              <div className="absolute left-0 top-10 z-50 w-[240px] rounded-2xl border border-white/[0.05] bg-[#141416]/95 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,0,0,0.45)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                {menuItems.map((item) => (
-                  <button
-                    key={item.label}
-                    className="w-full px-4 py-3 hover:bg-white/[0.04] transition flex items-center gap-3 text-left"
-                  >
-                    <item.icon
-                      size={15}
-                      className="text-white/40"
-                    />
-
-                    <span className="text-sm text-white/75">
-                      {item.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Message Bubble */}
-        <div
-          className={`px-6 py-5 rounded-[30px] text-[15px] leading-8 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.35)] transition-all duration-500
-          ${
-            isUser
-              ? "bg-white text-black rounded-br-md"
-              : "bg-white/[0.045] border border-white/[0.03] text-white/88 rounded-bl-md hover:bg-white/[0.06]"
+      {/* Bubble + Menu */}
+      <div
+        className={`flex items-center gap-2
+        ${isUser
+            ? "flex-row"
+            : "flex-row"
           }`}
+      >
+        {/* Bubble */}
+        <div
+          className={`
+          px-6 py-5 rounded-[28px]
+          max-w-[520px]
+          text-[15px]
+          leading-7
+          backdrop-blur-2xl
+          transition-all duration-300
+
+          ${isUser
+              ? `
+                bg-white
+                text-black
+                rounded-br-[10px]
+              `
+              : `
+                bg-white/[0.05]
+                border border-white/[0.04]
+                text-white/90
+                rounded-bl-[10px]
+              `
+            }
+        `}
         >
-          {message}
+
+          <div className="whitespace-pre-wrap">
+            {formatMessage(message, isUser)}
+          </div>
         </div>
 
-        {/* Right Menu */}
-        {isUser && (
-          <div
-            className="relative"
-            ref={menuRef}
+        {/* Menu */}
+        <div className="relative flex-shrink-0">
+          <button
+            onClick={() =>
+              setOpen(!open)
+            }
+            className="w-9 h-9 rounded-xl hover:bg-white/[0.05] transition flex items-center justify-center"
           >
-            <button
-              onClick={() => setOpen((prev) => !prev)}
-              className="w-8 h-8 rounded-xl hover:bg-white/[0.05] transition flex items-center justify-center"
+            <MoreHorizontal
+              size={16}
+              className="text-white/30"
+            />
+          </button>
+
+          {open && (
+            <div
+              className={`
+              absolute top-10 z-50 w-[220px]
+              rounded-2xl
+              border border-white/[0.05]
+              bg-[#141416]/95
+              backdrop-blur-2xl
+              overflow-hidden
+              shadow-[0_20px_80px_rgba(0,0,0,0.45)]
+
+              ${isUser
+                  ? "right-0"
+                  : "left-0"
+                }
+            `}
             >
-              <MoreHorizontal
-                size={15}
-                className="text-white/35"
-              />
-            </button>
+              <button className="w-full px-4 py-3 hover:bg-white/[0.04] transition flex items-center gap-3 text-sm text-white/80">
+                <Copy size={15} />
+                Copy
+              </button>
 
-            {open && (
-              <div className="absolute right-0 top-10 z-50 w-[240px] rounded-2xl border border-white/[0.05] bg-[#141416]/95 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,0,0,0.45)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                {menuItems.map((item) => (
-                  <button
-                    key={item.label}
-                    className="w-full px-4 py-3 hover:bg-white/[0.04] transition flex items-center gap-3 text-left"
-                  >
-                    <item.icon
-                      size={15}
-                      className="text-white/40"
-                    />
+              <button className="w-full px-4 py-3 hover:bg-white/[0.04] transition flex items-center gap-3 text-sm text-white/80">
+                <Edit3 size={15} />
+                Edit
+              </button>
 
-                    <span className="text-sm text-white/75">
-                      {item.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+              <button className="w-full px-4 py-3 hover:bg-white/[0.04] transition flex items-center gap-3 text-sm text-white/80">
+                <RotateCcw size={15} />
+                Rewind Here
+              </button>
+
+              <button className="w-full px-4 py-3 hover:bg-red-500/10 transition flex items-center gap-3 text-sm text-red-300">
+                <Trash2 size={15} />
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

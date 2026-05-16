@@ -1,36 +1,129 @@
+import React, {
+  useEffect,
+  useRef,
+} from "react";
+
 import { motion } from "framer-motion";
+
+import { RotateCcw } from "lucide-react";
+
 import MessageBubble from "./MessageBubble";
 
-const ChatWindow = () => {
-  const messages = [
-    {
-      id: 1,
-      message:
-        "Some nights feel dangerous in a quiet way. Like silence is waiting for someone to say the wrong thing.",
-      isUser: false,
-    },
-    {
-      id: 2,
-      message: "Or the right thing.",
-      isUser: true,
-    },
-    {
-      id: 3,
-      message:
-        "Maybe that's why people talk so carefully after midnight.",
-      isUser: false,
-    },
-  ];
+import { type Message } from "../../types/message.types";
+import { type Character } from "../../types/character.types";
+import type { Conversation } from "../../types/conversation.types";
+import { regenerateMessage } from "../../services/api/message.api";
+
+type Props = {
+  messages: Message[];
+
+  loading: boolean;
+
+  selectedCharacter: Character | null;
+
+  isTyping: boolean;
+
+  conversation: Conversation | null;
+
+  setMessages: React.Dispatch<
+    React.SetStateAction<Message[]>
+  >;
+
+  setIsTyping: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
+};
+
+const ChatWindow = ({
+  messages,
+  loading,
+  selectedCharacter,
+  isTyping,
+  setIsTyping,
+  conversation,
+  setMessages
+}: Props) => {
+  const bottomRef =
+    useRef<HTMLDivElement>(null);
+
+
+  const scrollToBottom = () => {
+    bottomRef.current?.scrollIntoView({
+      behavior: messages.length < 3
+        ? "auto"
+        : "smooth",
+    });
+  };
+
+  const handleRegenerate =
+    async () => {
+      if (!conversation?._id) return;
+
+      try {
+        setIsTyping(true);
+
+        const response: any =
+          await regenerateMessage(
+            conversation._id
+          );
+
+        setMessages((prev) => {
+          const updated = [...prev];
+
+          const lastAiIndex =
+            [...updated]
+              .reverse()
+              .findIndex(
+                (message) =>
+                  message.sender ===
+                  "character"
+              );
+
+          if (
+            lastAiIndex === -1
+          ) {
+            return updated;
+          }
+
+          const actualIndex =
+            updated.length -
+            1 -
+            lastAiIndex;
+
+          updated[actualIndex] =
+            response.data;
+
+          return updated;
+        });
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsTyping(false);
+      }
+    };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-10">
+    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-visible px-8 py-4">
       <div className="max-w-4xl mx-auto">
-        {/* Empty State */}
-        {messages.length === 0 ? (
+        {loading ? (
+          <div className="text-white/30">
+            loading memories...
+          </div>
+        ) : messages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{
+                opacity: 0,
+                y: 12,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
               className="text-center"
             >
               <h2 className="text-white/70 text-xl">
@@ -43,61 +136,80 @@ const ChatWindow = () => {
             </motion.div>
           </div>
         ) : (
-          <div className="space-y-8">
-            {messages.map((msg, index) => (
-              <motion.div
-                key={msg.id}
-                initial={{
-                  opacity: 0,
-                  y: 20,
-                  filter: "blur(8px)",
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  filter: "blur(0px)",
-                }}
-                transition={{
-                  duration: 0.45,
-                  delay: index * 0.08,
-                }}
-              >
-                <MessageBubble
-                  message={msg.message}
-                  isUser={msg.isUser}
-                />
-              </motion.div>
-            ))}
+          <div className="space-y-8 pb-0">
+            {messages.map(
+              (message, index) => (
+                <React.Fragment key={message._id}>
+                  <motion.div
+                    key={message._id}
+                    initial={{
+                      opacity: 0,
+                      y: 20,
+                      filter: "blur(8px)",
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      filter: "blur(0px)",
+                    }}
+                    transition={{
+                      duration: 0.45,
+                      delay: index * 0.05,
+                    }}
+                  >
+                    <MessageBubble
+                      message={message.content}
+                      isUser={
+                        message.sender === "user"
+                      }
+                      characterImage={
+                        selectedCharacter?.image
+                      }
+                    />
+                  </motion.div>
+                  {index === messages.length - 1 &&
+                    message.sender ===
+                    "character" && (
+                      <div className="mt-3 ml-14">
+                        <button
+                          onClick={
+                            handleRegenerate
+                          }
+                          className="flex items-center gap-2 text-xs text-white/30 hover:text-white/60 transition"
+                        >
+                          <RotateCcw size={13} />
+                          regenerate
+                        </button>
+                      </div>
+                    )}
+                </React.Fragment>
+              )
+            )}
+            {isTyping && (
+              <div className="flex items-center gap-3">
+                {selectedCharacter?.image ? (
+                  <img
+                    src={selectedCharacter.image}
+                    alt={selectedCharacter.name}
+                    className="w-11 h-11 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-full bg-white/[0.06]" />
+                )}
 
-            {/* Typing Indicator */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{
-                delay: 1,
-              }}
-              className="flex items-center gap-3"
-            >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3f3f46] to-[#1c1c1f]" />
+                <div className="px-5 py-4 rounded-[24px] rounded-bl-[10px] bg-white/[0.05] border border-white/[0.04]">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 rounded-full bg-white/40 animate-bounce" />
 
-              <div className="px-5 py-4 rounded-[28px] rounded-bl-md bg-white/[0.04] border border-white/[0.03] flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-white/40 animate-bounce" />
+                    <span className="w-2 h-2 rounded-full bg-white/40 animate-bounce [animation-delay:0.15s]" />
 
-                <div
-                  className="w-2 h-2 rounded-full bg-white/40 animate-bounce"
-                  style={{
-                    animationDelay: "0.15s",
-                  }}
-                />
-
-                <div
-                  className="w-2 h-2 rounded-full bg-white/40 animate-bounce"
-                  style={{
-                    animationDelay: "0.3s",
-                  }}
-                />
+                    <span className="w-2 h-2 rounded-full bg-white/40 animate-bounce [animation-delay:0.3s]" />
+                  </div>
+                </div>
               </div>
-            </motion.div>
+            )}
+
+            <div ref={bottomRef} />
           </div>
         )}
       </div>

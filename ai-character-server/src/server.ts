@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import { connectDB } from "./config/db";
 
 import characterRoutes from "./modules/character/character.routes";
+import conversationRoutes from "./modules/conversation/conversation.routes";
+import messageRoutes from "./modules/message/message.routes";
 
 dotenv.config();
 
@@ -21,6 +23,15 @@ app.get("/", (_, res) => {
 });
 
 app.use("/api/characters", characterRoutes);
+app.use(
+  "/api/conversations",
+  conversationRoutes
+);
+
+app.use(
+  "/api/messages",
+  messageRoutes
+);
 
 const startServer = async () => {
   await connectDB();
